@@ -1,100 +1,62 @@
 package main
 
 import (
-	"github.com/disintegration/imaging"
-	"image/jpeg"
-	"io/ioutil"
-	"strings"
-	"fmt"
+	//"reflect"
+	"image/png"
+	"image/color"
+	//"fmt"
 	"os"
 	"log"
 )
 
-func findJpeg() (jpgArr []string) {
-
-	//читаем файлы в директории
-	files, _ := ioutil.ReadDir("./")
-
-	//файлы, имеющие расширение jpg выносим в отдельный массив
-    for _, f := range files {
-    		split := strings.Split(f.Name(), ".")
-    		ext := split[len(split) - 1];
-
-    		if (ext == "jpg") {
-            	jpgArr = append(jpgArr, f.Name())
-    		}
-    }
-
-    return
+type ImageSet interface {
+	Set(x, y int, c color.Color)
 }
 
 func main() {
-	jpgArr := findJpeg()
-	for _, fileName := range jpgArr {
-	    file, err := os.Open(fileName)
+		//открываем файл
+	    file, err := os.Open("1.png")
 	    if err != nil {
 	        log.Fatal(err)
 	    }
 
-	    fmt.Println(file)
-
-	    // decode jpeg into image.Image
-	    img, err := jpeg.Decode(file)
+	    //конвертируем в картинку
+	    img, err := png.Decode(file)
 	    if err != nil {
 	        log.Fatal(err)
 	    }
-	    file.Close()
 
-	    // and preserve aspect ratio
-	    //m := resize.Resize(100, 0, img, resize.Lanczos3)
-        m := imaging.FlipH(img)
+	    //функция для установки пикселя
+	    imgSet := img.(ImageSet)
 
-	    out, err := os.Create("_" + fileName)
-	    if err != nil {
-	        log.Fatal(err)
-	    }
-	    defer out.Close()
+	    //цикл по картинке
+    	size := img.Bounds().Size()
+    	for y := 0; y < size.Y; y++ {
+	        for x := 0; x < size.X; x++ {
+	        	c := img.At(x, y);
+	        	_, _, _, a := c.RGBA()
 
-	    // write new image to file
-	    jpeg.Encode(out, m, nil)
-	}
+	        	if (a < 65535) {
+	        		pixel := color.RGBA{
+	        			255, 
+	        			0, 
+	        			0, 
+	        			255,
+	        		}
+	        		imgSet.Set(x, y, pixel)
+	        	}
+	        }
+    	}
+
+    	//создаём новый файл
+		fd, err := os.Create("./_1.png")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		//декодируем изображение в новый файл
+		err = png.Encode(fd, img)
+		if err != nil {
+			log.Fatal(err)
+		}
 }
-
-/*package main
-
-import (
-    "github.com/nfnt/resize"
-    "image/jpeg"
-    "log"
-    "os"
-    "fmt"
-)
-
-func main() {
-    // open "test.jpg"
-    file, err := os.Open("1.jpg")
-    if err != nil {
-        log.Fatal(err)
-    }
-
-    fmt.Println(file)
-
-    // decode jpeg into image.Image
-    img, err := jpeg.Decode(file)
-    if err != nil {
-        log.Fatal(err)
-    }
-    file.Close()
-
-    // and preserve aspect ratio
-    m := resize.Resize(100, 0, img, resize.Lanczos3)
-
-    out, err := os.Create("test_resized.jpg")
-    if err != nil {
-        log.Fatal(err)
-    }
-    defer out.Close()
-
-    // write new image to file
-    jpeg.Encode(out, m, nil)
-}*/
