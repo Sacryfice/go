@@ -2,10 +2,62 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
+	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
+	"strconv"
+
 	"github.com/eknkc/amber"
 )
+
+type Path struct {
+	Path string
+	File string
+}
+
+type Config struct {
+	Paths []Path
+	Port  int
+}
+
+var config = readConfig()
+
+func main() {
+	for _, path := range config.Paths {
+		addHandle(path)
+	}
+
+	http.ListenAndServe(":"+strconv.Itoa(config.Port), nil)
+}
+
+func addHandle(path Path) {
+	var html = readJadeFile(path.File)
+	var handler = func(res http.ResponseWriter, req *http.Request) {		
+		res.Header().Set(
+			"Content-Type",
+			"text/html",
+		)
+		io.WriteString(
+			res,
+			html,
+		)
+	}
+
+	http.HandleFunc(path.Path, handler)
+}
+
+func hello(res http.ResponseWriter, req *http.Request) {
+	res.Header().Set(
+		"Content-Type",
+		"text/html",
+	)
+	io.WriteString(
+		res,
+		readJadeFile("test"),
+	)
+}
 
 func readJadeFile(filename string) string {
 	person := make(map[string]string)
@@ -23,18 +75,16 @@ func readJadeFile(filename string) string {
 	return html
 }
 
-func hello(res http.ResponseWriter, req *http.Request) {
-	res.Header().Set(
-		"Content-Type",
-		"text/html",
-	)
-	io.WriteString(
-		res,
-		readJadeFile("test"),
-	)
-}
+func readConfig() *Config {
+	content, err := ioutil.ReadFile("server.json")
+	if err != nil {
+		fmt.Print("Error:", err)
+	}
+	var conf Config
+	err = json.Unmarshal(content, &conf)
+	if err != nil {
+		fmt.Print("Error:", err)
+	}
 
-func main() {
-	http.HandleFunc("/hello", hello)
-	http.ListenAndServe(":80", nil)
+	return &conf
 }

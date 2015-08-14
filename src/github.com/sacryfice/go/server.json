@@ -1,0 +1,13 @@
+{
+  "port": 80,
+  "paths": [
+    {
+      "path": "/",
+      "file": "index"
+    },
+    {
+      "path": "/test",
+      "file": "test"
+    }
+  ]
+}
